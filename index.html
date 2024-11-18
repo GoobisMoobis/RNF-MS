@@ -30,12 +30,12 @@
 
         // Make these functions available globally
         window.postMessageToDB = function(messageData) {
-            return push(ref(database, 'messages'), messageData);
+            return window.firebasePush(window.firebaseRef(window.database, 'messages'), messageData);
         };
 
         window.listenForMessages = function(callback) {
-            const messagesRef = ref(database, 'messages');
-            onValue(messagesRef, (snapshot) => {
+            const messagesRef = window.firebaseRef(window.database, 'messages');
+            window.firebaseOnValue(messagesRef, (snapshot) => {
                 const messages = [];
                 snapshot.forEach((childSnapshot) => {
                     messages.push({
@@ -48,17 +48,21 @@
         };
 
         window.updateMessage = function(messageId, updates) {
-            return update(ref(database, `messages/${messageId}`), updates);
+            return window.firebaseUpdate(window.firebaseRef(window.database, `messages/${messageId}`), updates);
         };
 
         window.deleteAllMessages = function() {
-            return remove(ref(database, 'messages'));
+            return window.firebaseRemove(window.firebaseRef(window.database, 'messages'));
         };
 
-        // Export Firebase functions to window
+        // Export all Firebase functions and objects to window
         window.database = database;
-        window.firebaseRef = ref;  // Changed from databaseRef to firebaseRef
-        window.firebaseGet = get;  // Added get function to window object for clarity
+        window.firebaseRef = ref;
+        window.firebaseGet = get;
+        window.firebasePush = push;
+        window.firebaseUpdate = update;
+        window.firebaseRemove = remove;
+        window.firebaseOnValue = onValue; for clarity
     </script>
 </head>
 <body>
@@ -211,7 +215,7 @@
                 });
 
                 if (Object.keys(updates).length > 0) {
-                    await update(messagesRef, updates);
+                    await window.firebaseUpdate(messagesRef, updates);
                 }
 
                 localStorage.removeItem('currentUser');
