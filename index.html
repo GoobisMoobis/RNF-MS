@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Message Board</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+
+        .message-form {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 8px;
+            margin: 8px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        .message {
+            background-color: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .username {
+            font-weight: bold;
+            color: #4CAF50;
+        }
+
+        .timestamp {
+            color: #666;
+            font-size: 0.8em;
+        }
+    </style>
+</head>
+<body>
+    <div class="message-form">
+        <h2>Post a Message</h2>
+        <input type="text" id="username" placeholder="Your username" required>
+        <textarea id="message" placeholder="Your message" required></textarea>
+        <button onclick="postMessage()">Send Message</button>
+    </div>
+
+    <div id="messages"></div>
+
+    <script>
+        // Load messages from localStorage when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            displayMessages();
+        });
+
+        function postMessage() {
+            const username = document.getElementById('username').value.trim();
+            const message = document.getElementById('message').value.trim();
+            
+            if (!username || !message) {
+                alert('Please fill in both username and message!');
+                return;
+            }
+
+            // Get existing messages or initialize empty array
+            let messages = JSON.parse(localStorage.getItem('messages') || '[]');
+            
+            // Add new message
+            messages.push({
+                username: username,
+                message: message,
+                timestamp: new Date().toISOString()
+            });
+
+            // Store in localStorage
+            localStorage.setItem('messages', JSON.stringify(messages));
+
+            // Clear input fields
+            document.getElementById('message').value = '';
+            
+            // Update display
+            displayMessages();
+        }
+
+        function displayMessages() {
+            const messagesDiv = document.getElementById('messages');
+            const messages = JSON.parse(localStorage.getItem('messages') || '[]');
+            
+            // Sort messages with newest first
+            messages.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+            messagesDiv.innerHTML = messages.map(msg => `
+                <div class="message">
+                    <span class="username">${escapeHTML(msg.username)}</span>
+                    <span class="timestamp">${new Date(msg.timestamp).toLocaleString()}</span>
+                    <p>${escapeHTML(msg.message)}</p>
+                </div>
+            `).join('');
+        }
+
+        // Helper function to prevent XSS
+        function escapeHTML(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>
