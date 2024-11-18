@@ -13,15 +13,15 @@
 
         // Your web app's Firebase configuration
         const firebaseConfig = {
-  apiKey: "AIzaSyCW3OKu2QvNKlMPMqTcsUtjcMM2VaN4qD8",
-  authDomain: "msgnrts.firebaseapp.com",
-  databaseURL: "https://msgnrts-default-rtdb.firebaseio.com",
-  projectId: "msgnrts",
-  storageBucket: "msgnrts.firebasestorage.app",
-  messagingSenderId: "124811044741",
-  appId: "1:124811044741:web:62a701cf205a5b898d06ec",
-  measurementId: "G-1JET3WPTW1"
-};
+            apiKey: "AIzaSyCW3OKu2QvNKlMPMqTcsUtjcMM2VaN4qD8",
+            authDomain: "msgnrts.firebaseapp.com",
+            databaseURL: "https://msgnrts-default-rtdb.firebaseio.com",
+            projectId: "msgnrts",
+            storageBucket: "msgnrts.firebasestorage.app",
+            messagingSenderId: "124811044741",
+            appId: "1:124811044741:web:62a701cf205a5b898d06ec",
+            measurementId: "G-1JET3WPTW1"
+        };
 
         // Initialize Firebase
         const app = initializeApp(firebaseConfig);
@@ -120,7 +120,7 @@
         function setUsername() {
             const username = document.getElementById('username').value.trim();
             const nameColor = document.getElementById('nameColor').value;
-            
+
             if (!username) {
                 alert('Please enter a username!');
                 return;
@@ -150,7 +150,7 @@
             }
 
             const message = document.getElementById('message').value.trim();
-            
+
             if (!message) {
                 alert('Please enter a message!');
                 return;
@@ -174,7 +174,7 @@
         function displayMessages(messages) {
             // Sort messages by timestamp
             messages.sort((a, b) => b.timestamp - a.timestamp);
-            
+
             const messagesDiv = document.getElementById('messages');
             messagesDiv.innerHTML = messages.map(msg => `
                 <div class="message">
@@ -189,11 +189,11 @@
 
         async function deleteAccount() {
             const deletedUsername = currentUser.username;
-            
+
             try {
                 const messagesRef = ref(database, 'messages');
                 const snapshot = await get(messagesRef);
-                
+
                 const updates = {};
                 snapshot.forEach((childSnapshot) => {
                     const message = childSnapshot.val();
@@ -217,7 +217,7 @@
                 document.getElementById('nameColor').value = '#4CAF50';
                 document.getElementById('messageSection').classList.remove('active');
                 document.getElementById('usernameSection').classList.add('active');
-                
+
                 hideDeleteModal();
             } catch (error) {
                 alert('Error deleting account: ' + error.message);
@@ -228,7 +228,7 @@
             if (confirm('This will delete ALL messages. This action cannot be undone. Continue?')) {
                 try {
                     await deleteAllMessages();
-                    
+
                     currentUser = null;
                     localStorage.removeItem('currentUser');
                     document.getElementById('username').value = '';
