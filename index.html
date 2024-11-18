@@ -28,6 +28,51 @@
             margin-bottom: 15px;
         }
 
+        .username-row {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 15px;
+        }
+
+        .username-input-container {
+            flex: 1;
+        }
+
+        .color-picker-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .color-picker-button {
+            width: 30px;
+            height: 30px;
+            padding: 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            background-color: #fff;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .color-picker-button img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        #nameColor {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
         .color-picker {
             display: flex;
             align-items: center;
@@ -104,16 +149,90 @@
         .message-section.active {
             display: block;
         }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+        }
+
+        .modal-content {
+            position: relative;
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border-radius: 8px;
+            width: 80%;
+            max-width: 500px;
+            text-align: center;
+        }
+
+        .close-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 24px;
+            cursor: pointer;
+            background: none;
+            border: none;
+            color: #666;
+            padding: 0;
+        }
+
+        .close-button:hover {
+            color: #000;
+        }
+
+        .modal-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .delete-button {
+            background-color: #ff4444;
+        }
+
+        .delete-button:hover {
+            background-color: #cc0000;
+        }
+
+        .clear-data-button {
+            background-color: #666;
+            transition: background-color 0.3s;
+        }
+
+        .clear-data-button:hover {
+            background-color: #8b0000;
+        }
+
+        .modal h2 {
+            color: #333;
+            margin-bottom: 20px;
+        }
     </style>
 </head>
 <body>
     <div class="message-form">
         <div class="username-section active" id="usernameSection">
             <h2>Choose Your Username</h2>
-            <input type="text" id="username" placeholder="Your username" required>
-            <div class="color-picker">
-                <label for="nameColor">Username Color:</label>
-                <input type="color" id="nameColor" value="#4CAF50">
+            <div class="username-row">
+                <div class="username-input-container">
+                    <input type="text" id="username" placeholder="Your username" required>
+                </div>
+                <div class="color-picker-container">
+                    <label for="nameColor">Color:</label>
+                    <div class="color-picker-button">
+                        <img src="https://www.pngkey.com/png/full/183-1837096_fill-color-tool-graphic-bucket-paint-drop-comments.png" alt="Color picker">
+                        <input type="color" id="nameColor" value="#4CAF50">
+                    </div>
+                </div>
             </div>
             <button onclick="setUsername()">Set Username</button>
         </div>
@@ -132,12 +251,22 @@
     </div>
 
     <div id="messages"></div>
-    <button id="deleteAccount" onclick="deleteAccount()">Delete Account</button>
+    <button id="deleteAccount" onclick="showDeleteModal()">Delete Account</button>
+
+    <div id="deleteModal" class="modal">
+        <div class="modal-content">
+            <button class="close-button" onclick="hideDeleteModal()">&times;</button>
+            <h2>Are you sure you want to delete your account?</h2>
+            <div class="modal-buttons">
+                <button class="delete-button" onclick="deleteAccount()">Delete Account</button>
+                <button class="clear-data-button" onclick="clearAllData()">Clear Website Data</button>
+            </div>
+        </div>
+    </div>
 
     <script>
         let currentUser = null;
 
-        // Check if user already exists
         document.addEventListener('DOMContentLoaded', function() {
             const savedUser = localStorage.getItem('currentUser');
             if (savedUser) {
@@ -186,25 +315,18 @@
                 return;
             }
 
-            // Get existing messages or initialize empty array
             let messages = JSON.parse(localStorage.getItem('messages') || '[]');
             
-            // Add new message
             messages.push({
                 username: currentUser.username,
                 color: currentUser.color,
                 message: message,
                 timestamp: new Date().toISOString(),
-                userId: currentUser.username // Using username as userId for simplicity
+                userId: currentUser.username
             });
 
-            // Store in localStorage
             localStorage.setItem('messages', JSON.stringify(messages));
-
-            // Clear input fields
             document.getElementById('message').value = '';
-            
-            // Update display
             displayMessages();
         }
 
@@ -212,7 +334,6 @@
             const messagesDiv = document.getElementById('messages');
             const messages = JSON.parse(localStorage.getItem('messages') || '[]');
             
-            // Sort messages with newest first
             messages.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
             messagesDiv.innerHTML = messages.map(msg => `
@@ -226,47 +347,70 @@
             `).join('');
         }
 
-        function deleteAccount() {
+        function showDeleteModal() {
             if (!currentUser) {
                 alert('No account to delete!');
                 return;
             }
+            document.getElementById('deleteModal').style.display = 'block';
+        }
 
-            if (confirm('Are you sure you want to delete your account? This will mark all your messages as "Deleted User" and cannot be undone.')) {
-                const deletedUsername = currentUser.username;
-                
-                // Update all messages by this user
-                let messages = JSON.parse(localStorage.getItem('messages') || '[]');
-                messages = messages.map(msg => {
-                    if (msg.username === deletedUsername) {
-                        return {
-                            ...msg,
-                            username: 'Deleted User',
-                            color: '#666666'
-                        };
-                    }
-                    return msg;
-                });
+        function hideDeleteModal() {
+            document.getElementById('deleteModal').style.display = 'none';
+        }
 
-                localStorage.setItem('messages', JSON.stringify(messages));
-                localStorage.removeItem('currentUser');
+        function deleteAccount() {
+            const deletedUsername = currentUser.username;
+            
+            let messages = JSON.parse(localStorage.getItem('messages') || '[]');
+            messages = messages.map(msg => {
+                if (msg.username === deletedUsername) {
+                    return {
+                        ...msg,
+                        username: 'Deleted User',
+                        color: '#666666'
+                    };
+                }
+                return msg;
+            });
+
+            localStorage.setItem('messages', JSON.stringify(messages));
+            localStorage.removeItem('currentUser');
+            currentUser = null;
+
+            document.getElementById('username').value = '';
+            document.getElementById('nameColor').value = '#4CAF50';
+            document.getElementById('messageSection').classList.remove('active');
+            document.getElementById('usernameSection').classList.add('active');
+            
+            hideDeleteModal();
+            displayMessages();
+        }
+
+        function clearAllData() {
+            if (confirm('This will delete ALL messages and accounts. This action cannot be undone. Continue?')) {
+                localStorage.clear();
                 currentUser = null;
-
-                // Reset UI
                 document.getElementById('username').value = '';
                 document.getElementById('nameColor').value = '#4CAF50';
                 document.getElementById('messageSection').classList.remove('active');
                 document.getElementById('usernameSection').classList.add('active');
-                
-                displayMessages();
+                document.getElementById('messages').innerHTML = '';
+                hideDeleteModal();
             }
         }
 
-        // Helper function to prevent XSS
         function escapeHTML(str) {
             const div = document.createElement('div');
             div.textContent = str;
             return div.innerHTML;
+        }
+
+        window.onclick = function(event) {
+            const modal = document.getElementById('deleteModal');
+            if (event.target === modal) {
+                hideDeleteModal();
+            }
         }
     </script>
 </body>
