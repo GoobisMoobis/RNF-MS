@@ -57,8 +57,8 @@
 
         // Export Firebase functions to window
         window.database = database;
-        window.firebaseGet = get;
-        window.firebaseRef = ref;  // Changed from databaseRef to firebaseRef for clarity
+        window.firebaseRef = ref;  // Changed from databaseRef to firebaseRef
+        window.firebaseGet = get;  // Added get function to window object for clarity
     </script>
 </head>
 <body>
@@ -196,7 +196,7 @@
             
             try {
                 const messagesRef = window.firebaseRef(window.database, 'messages');  // Fixed: Using window.firebaseRef
-                const snapshot = await get(messagesRef);
+                const snapshot = await window.firebaseGet(messagesRef);
                 
                 const updates = {};
                 snapshot.forEach((childSnapshot) => {
