@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simple Message Board</title>
+    <title>Rationality NRTS Faction Message Service</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -19,6 +19,19 @@
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             margin-bottom: 20px;
+        }
+
+        .form-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .color-picker {
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
         input, textarea {
@@ -43,6 +56,11 @@
             background-color: #45a049;
         }
 
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+
         .message {
             background-color: white;
             padding: 15px;
@@ -53,37 +71,118 @@
 
         .username {
             font-weight: bold;
-            color: #4CAF50;
         }
 
         .timestamp {
             color: #666;
             font-size: 0.8em;
         }
+
+        #deleteAccount {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #ff4444;
+        }
+
+        #deleteAccount:hover {
+            background-color: #cc0000;
+        }
+
+        .username-section {
+            display: none;
+        }
+
+        .username-section.active {
+            display: block;
+        }
+
+        .message-section {
+            display: none;
+        }
+
+        .message-section.active {
+            display: block;
+        }
     </style>
 </head>
 <body>
     <div class="message-form">
-        <h2>Post a Message</h2>
-        <input type="text" id="username" placeholder="Your username" required>
-        <textarea id="message" placeholder="Your message" required></textarea>
-        <button onclick="postMessage()">Send Message</button>
+        <div class="username-section active" id="usernameSection">
+            <h2>Choose Your Username</h2>
+            <input type="text" id="username" placeholder="Your username" required>
+            <div class="color-picker">
+                <label for="nameColor">Username Color:</label>
+                <input type="color" id="nameColor" value="#4CAF50">
+            </div>
+            <button onclick="setUsername()">Set Username</button>
+        </div>
+
+        <div class="message-section" id="messageSection">
+            <div class="form-header">
+                <h2>Post a Message</h2>
+                <div class="color-picker">
+                    <span>Posting as: </span>
+                    <span id="currentUsername" class="username"></span>
+                </div>
+            </div>
+            <textarea id="message" placeholder="Your message" required></textarea>
+            <button onclick="postMessage()">Send Message</button>
+        </div>
     </div>
 
     <div id="messages"></div>
+    <button id="deleteAccount" onclick="deleteAccount()">Delete Account</button>
 
     <script>
-        // Load messages from localStorage when page loads
+        let currentUser = null;
+
+        // Check if user already exists
         document.addEventListener('DOMContentLoaded', function() {
+            const savedUser = localStorage.getItem('currentUser');
+            if (savedUser) {
+                currentUser = JSON.parse(savedUser);
+                showMessageSection();
+            }
             displayMessages();
         });
 
-        function postMessage() {
+        function setUsername() {
             const username = document.getElementById('username').value.trim();
+            const nameColor = document.getElementById('nameColor').value;
+            
+            if (!username) {
+                alert('Please enter a username!');
+                return;
+            }
+
+            currentUser = {
+                username: username,
+                color: nameColor
+            };
+
+            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+            showMessageSection();
+        }
+
+        function showMessageSection() {
+            document.getElementById('usernameSection').classList.remove('active');
+            document.getElementById('messageSection').classList.add('active');
+            const currentUsernameSpan = document.getElementById('currentUsername');
+            currentUsernameSpan.textContent = currentUser.username;
+            currentUsernameSpan.style.color = currentUser.color;
+        }
+
+        function postMessage() {
+            if (!currentUser) {
+                alert('Please set a username first!');
+                return;
+            }
+
             const message = document.getElementById('message').value.trim();
             
-            if (!username || !message) {
-                alert('Please fill in both username and message!');
+            if (!message) {
+                alert('Please enter a message!');
                 return;
             }
 
@@ -92,9 +191,11 @@
             
             // Add new message
             messages.push({
-                username: username,
+                username: currentUser.username,
+                color: currentUser.color,
                 message: message,
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
+                userId: currentUser.username // Using username as userId for simplicity
             });
 
             // Store in localStorage
@@ -116,11 +217,49 @@
 
             messagesDiv.innerHTML = messages.map(msg => `
                 <div class="message">
-                    <span class="username">${escapeHTML(msg.username)}</span>
+                    <span class="username" style="color: ${escapeHTML(msg.color)}">
+                        ${escapeHTML(msg.username)}
+                    </span>
                     <span class="timestamp">${new Date(msg.timestamp).toLocaleString()}</span>
                     <p>${escapeHTML(msg.message)}</p>
                 </div>
             `).join('');
+        }
+
+        function deleteAccount() {
+            if (!currentUser) {
+                alert('No account to delete!');
+                return;
+            }
+
+            if (confirm('Are you sure you want to delete your account? This will mark all your messages as "Deleted User" and cannot be undone.')) {
+                const deletedUsername = currentUser.username;
+                
+                // Update all messages by this user
+                let messages = JSON.parse(localStorage.getItem('messages') || '[]');
+                messages = messages.map(msg => {
+                    if (msg.username === deletedUsername) {
+                        return {
+                            ...msg,
+                            username: 'Deleted User',
+                            color: '#666666'
+                        };
+                    }
+                    return msg;
+                });
+
+                localStorage.setItem('messages', JSON.stringify(messages));
+                localStorage.removeItem('currentUser');
+                currentUser = null;
+
+                // Reset UI
+                document.getElementById('username').value = '';
+                document.getElementById('nameColor').value = '#4CAF50';
+                document.getElementById('messageSection').classList.remove('active');
+                document.getElementById('usernameSection').classList.add('active');
+                
+                displayMessages();
+            }
         }
 
         // Helper function to prevent XSS
