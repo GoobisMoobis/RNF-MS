@@ -5,28 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rationality NRTS Faction Message Service</title>
     <link rel="stylesheet" href="styles.css">
+
     <!-- Import Firebase -->
- <script type="module">
+    <script type="module">
+        // Import the functions you need from the SDKs you need
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
         import { getDatabase, ref, push, onValue, remove, update, get } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js";
 
-        // Firebase configuration
+        // Your web app's Firebase configuration
         const firebaseConfig = {
-            apiKey: "AIzaSyCW3OKu2QvNKlMPMqTcsUtjcMM2VaN4qD8",
-            authDomain: "msgnrts.firebaseapp.com",
-            databaseURL: "https://msgnrts-default-rtdb.firebaseio.com",
-            projectId: "msgnrts",
-            storageBucket: "msgnrts.firebasestorage.app",
-            messagingSenderId: "124811044741",
-            appId: "1:124811044741:web:62a701cf205a5b898d06ec",
-            measurementId: "G-1JET3WPTW1"
+            // Replace this with your config from Firebase Console
+            apiKey: "your-api-key",
+            authDomain: "your-project.firebaseapp.com",
+            databaseURL: "https://your-project-default-rtdb.firebaseio.com",
+            projectId: "your-project",
+            storageBucket: "your-project.appspot.com",
+            messagingSenderId: "your-sender-id",
+            appId: "your-app-id"
         };
 
         // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const database = getDatabase(app);
 
-        // Global Firebase functions
+        // Make these functions available globally
         window.postMessageToDB = function(messageData) {
             return push(ref(database, 'messages'), messageData);
         };
@@ -49,134 +51,12 @@
             return update(ref(database, `messages/${messageId}`), updates);
         };
 
+        window.deleteAllMessages = function() {
+            return remove(ref(database, 'messages'));
+        };
+
         window.database = database;
         window.databaseRef = ref;
-
-        let currentUser = null;
-
-        document.addEventListener('DOMContentLoaded', function() {
-            const savedUser = localStorage.getItem('currentUser');
-            if (savedUser) {
-                currentUser = JSON.parse(savedUser);
-                showMessageSection();
-            }
-            listenForMessages(displayMessages);
-        });
-
-        function setUsername() {
-            const username = document.getElementById('username').value.trim();
-            const nameColor = document.getElementById('nameColor').value;
-            
-            if (!username) {
-                alert('Please enter a username!');
-                return;
-            }
-
-            currentUser = { username, color: nameColor };
-            localStorage.setItem('currentUser', JSON.stringify(currentUser));
-            showMessageSection();
-        }
-
-        function showMessageSection() {
-            document.getElementById('usernameSection').classList.remove('active');
-            document.getElementById('messageSection').classList.add('active');
-            const currentUsernameSpan = document.getElementById('currentUsername');
-            currentUsernameSpan.textContent = currentUser.username;
-            currentUsernameSpan.style.color = currentUser.color;
-        }
-
-        async function postMessage() {
-            if (!currentUser) {
-                alert('Please set a username first!');
-                return;
-            }
-
-            const message = document.getElementById('message').value.trim();
-            
-            if (!message) {
-                alert('Please enter a message!');
-                return;
-            }
-
-            try {
-                await postMessageToDB({
-                    username: currentUser.username,
-                    color: currentUser.color,
-                    message,
-                    timestamp: Date.now(),
-                    userId: currentUser.username
-                });
-
-                document.getElementById('message').value = '';
-            } catch (error) {
-                alert('Error posting message: ' + error.message);
-            }
-        }
-
-        function displayMessages(messages) {
-            messages.sort((a, b) => b.timestamp - a.timestamp);
-            const messagesDiv = document.getElementById('messages');
-            messagesDiv.innerHTML = messages.map(msg => `
-                <div class="message">
-                    <span class="username" style="color: ${escapeHTML(msg.color)}">
-                        ${escapeHTML(msg.username)}
-                    </span>
-                    <span class="timestamp">${new Date(msg.timestamp).toLocaleString()}</span>
-                    <p>${escapeHTML(msg.message)}</p>
-                </div>
-            `).join('');
-        }
-
-        async function deleteAccount() {
-            if (!currentUser) {
-                alert('No account to delete!');
-                return;
-            }
-
-            const deletedUsername = currentUser.username;
-
-            try {
-                const messagesRef = window.databaseRef(database, 'messages'); // FIX: Access ref properly
-                const snapshot = await get(messagesRef);
-
-                const updates = {};
-                snapshot.forEach((childSnapshot) => {
-                    const message = childSnapshot.val();
-                    if (message.username === deletedUsername) {
-                        updates[childSnapshot.key] = {
-                            ...message,
-                            username: 'Deleted User',
-                            color: '#666666'
-                        };
-                    }
-                });
-
-                if (Object.keys(updates).length > 0) {
-                    await update(messagesRef, updates);
-                }
-
-                localStorage.removeItem('currentUser');
-                currentUser = null;
-
-                document.getElementById('username').value = '';
-                document.getElementById('nameColor').value = '#4CAF50';
-                document.getElementById('messageSection').classList.remove('active');
-                document.getElementById('usernameSection').classList.add('active');
-            } catch (error) {
-                alert('Error deleting account: ' + error.message);
-            }
-        }
-
-        function clearAllDataForClient() { // FIX: Corrected function name
-            const messagesDiv = document.getElementById('messages');
-            messagesDiv.innerHTML = ''; // Clear client messages only
-        }
-
-        function escapeHTML(str) {
-            const div = document.createElement('div');
-            div.textContent = str;
-            return div.innerHTML;
-        }
     </script>
 </head>
 <body>
@@ -241,7 +121,7 @@
         function setUsername() {
             const username = document.getElementById('username').value.trim();
             const nameColor = document.getElementById('nameColor').value;
-
+            
             if (!username) {
                 alert('Please enter a username!');
                 return;
@@ -271,7 +151,7 @@
             }
 
             const message = document.getElementById('message').value.trim();
-
+            
             if (!message) {
                 alert('Please enter a message!');
                 return;
@@ -295,7 +175,7 @@
         function displayMessages(messages) {
             // Sort messages by timestamp
             messages.sort((a, b) => b.timestamp - a.timestamp);
-
+            
             const messagesDiv = document.getElementById('messages');
             messagesDiv.innerHTML = messages.map(msg => `
                 <div class="message">
@@ -310,11 +190,11 @@
 
         async function deleteAccount() {
             const deletedUsername = currentUser.username;
-
+            
             try {
                 const messagesRef = ref(database, 'messages');
                 const snapshot = await get(messagesRef);
-
+                
                 const updates = {};
                 snapshot.forEach((childSnapshot) => {
                     const message = childSnapshot.val();
@@ -338,7 +218,7 @@
                 document.getElementById('nameColor').value = '#4CAF50';
                 document.getElementById('messageSection').classList.remove('active');
                 document.getElementById('usernameSection').classList.add('active');
-
+                
                 hideDeleteModal();
             } catch (error) {
                 alert('Error deleting account: ' + error.message);
@@ -349,7 +229,7 @@
             if (confirm('This will delete ALL messages. This action cannot be undone. Continue?')) {
                 try {
                     await deleteAllMessages();
-
+                    
                     currentUser = null;
                     localStorage.removeItem('currentUser');
                     document.getElementById('username').value = '';
