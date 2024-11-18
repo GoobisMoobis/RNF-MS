@@ -217,6 +217,59 @@
             margin-bottom: 20px;
         }
     </style>
+
+    <!-- Import Firebase -->
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
+        import { getDatabase, ref, push, onValue, remove, update, get } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js";
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            // Replace this with your config from Firebase Console
+            apiKey: "your-api-key",
+            authDomain: "your-project.firebaseapp.com",
+            databaseURL: "https://your-project-default-rtdb.firebaseio.com",
+            projectId: "your-project",
+            storageBucket: "your-project.appspot.com",
+            messagingSenderId: "your-sender-id",
+            appId: "your-app-id"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+
+        // Make these functions available globally
+        window.postMessageToDB = function(messageData) {
+            return push(ref(database, 'messages'), messageData);
+        };
+
+        window.listenForMessages = function(callback) {
+            const messagesRef = ref(database, 'messages');
+            onValue(messagesRef, (snapshot) => {
+                const messages = [];
+                snapshot.forEach((childSnapshot) => {
+                    messages.push({
+                        id: childSnapshot.key,
+                        ...childSnapshot.val()
+                    });
+                });
+                callback(messages);
+            });
+        };
+
+        window.updateMessage = function(messageId, updates) {
+            return update(ref(database, `messages/${messageId}`), updates);
+        };
+
+        window.deleteAllMessages = function() {
+            return remove(ref(database, 'messages'));
+        };
+
+        window.database = database;
+        window.databaseRef = ref;
+    </script>
 </head>
 <body>
     <div class="message-form">
@@ -273,7 +326,8 @@
                 currentUser = JSON.parse(savedUser);
                 showMessageSection();
             }
-            displayMessages();
+            // Start listening for messages
+            listenForMessages(displayMessages);
         });
 
         function setUsername() {
@@ -302,7 +356,7 @@
             currentUsernameSpan.style.color = currentUser.color;
         }
 
-        function postMessage() {
+        async function postMessage() {
             if (!currentUser) {
                 alert('Please set a username first!');
                 return;
@@ -315,27 +369,26 @@
                 return;
             }
 
-            let messages = JSON.parse(localStorage.getItem('messages') || '[]');
-            
-            messages.push({
-                username: currentUser.username,
-                color: currentUser.color,
-                message: message,
-                timestamp: new Date().toISOString(),
-                userId: currentUser.username
-            });
+            try {
+                await postMessageToDB({
+                    username: currentUser.username,
+                    color: currentUser.color,
+                    message: message,
+                    timestamp: Date.now(),
+                    userId: currentUser.username
+                });
 
-            localStorage.setItem('messages', JSON.stringify(messages));
-            document.getElementById('message').value = '';
-            displayMessages();
+                document.getElementById('message').value = '';
+            } catch (error) {
+                alert('Error posting message: ' + error.message);
+            }
         }
 
-        function displayMessages() {
-            const messagesDiv = document.getElementById('messages');
-            const messages = JSON.parse(localStorage.getItem('messages') || '[]');
+        function displayMessages(messages) {
+            // Sort messages by timestamp
+            messages.sort((a, b) => b.timestamp - a.timestamp);
             
-            messages.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-
+            const messagesDiv = document.getElementById('messages');
             messagesDiv.innerHTML = messages.map(msg => `
                 <div class="message">
                     <span class="username" style="color: ${escapeHTML(msg.color)}">
@@ -345,6 +398,61 @@
                     <p>${escapeHTML(msg.message)}</p>
                 </div>
             `).join('');
+        }
+
+        async function deleteAccount() {
+            const deletedUsername = currentUser.username;
+            
+            try {
+                const messagesRef = ref(database, 'messages');
+                const snapshot = await get(messagesRef);
+                
+                const updates = {};
+                snapshot.forEach((childSnapshot) => {
+                    const message = childSnapshot.val();
+                    if (message.username === deletedUsername) {
+                        updates[childSnapshot.key] = {
+                            ...message,
+                            username: 'Deleted User',
+                            color: '#666666'
+                        };
+                    }
+                });
+
+                if (Object.keys(updates).length > 0) {
+                    await update(messagesRef, updates);
+                }
+
+                localStorage.removeItem('currentUser');
+                currentUser = null;
+
+                document.getElementById('username').value = '';
+                document.getElementById('nameColor').value = '#4CAF50';
+                document.getElementById('messageSection').classList.remove('active');
+                document.getElementById('usernameSection').classList.add('active');
+                
+                hideDeleteModal();
+            } catch (error) {
+                alert('Error deleting account: ' + error.message);
+            }
+        }
+
+        async function clearAllData() {
+            if (confirm('This will delete ALL messages. This action cannot be undone. Continue?')) {
+                try {
+                    await deleteAllMessages();
+                    
+                    currentUser = null;
+                    localStorage.removeItem('currentUser');
+                    document.getElementById('username').value = '';
+                    document.getElementById('nameColor').value = '#4CAF50';
+                    document.getElementById('messageSection').classList.remove('active');
+                    document.getElementById('usernameSection').classList.add('active');
+                    hideDeleteModal();
+                } catch (error) {
+                    alert('Error clearing data: ' + error.message);
+                }
+            }
         }
 
         function showDeleteModal() {
@@ -357,47 +465,6 @@
 
         function hideDeleteModal() {
             document.getElementById('deleteModal').style.display = 'none';
-        }
-
-        function deleteAccount() {
-            const deletedUsername = currentUser.username;
-            
-            let messages = JSON.parse(localStorage.getItem('messages') || '[]');
-            messages = messages.map(msg => {
-                if (msg.username === deletedUsername) {
-                    return {
-                        ...msg,
-                        username: 'Deleted User',
-                        color: '#666666'
-                    };
-                }
-                return msg;
-            });
-
-            localStorage.setItem('messages', JSON.stringify(messages));
-            localStorage.removeItem('currentUser');
-            currentUser = null;
-
-            document.getElementById('username').value = '';
-            document.getElementById('nameColor').value = '#4CAF50';
-            document.getElementById('messageSection').classList.remove('active');
-            document.getElementById('usernameSection').classList.add('active');
-            
-            hideDeleteModal();
-            displayMessages();
-        }
-
-        function clearAllData() {
-            if (confirm('This will delete ALL messages and accounts. This action cannot be undone. Continue?')) {
-                localStorage.clear();
-                currentUser = null;
-                document.getElementById('username').value = '';
-                document.getElementById('nameColor').value = '#4CAF50';
-                document.getElementById('messageSection').classList.remove('active');
-                document.getElementById('usernameSection').classList.add('active');
-                document.getElementById('messages').innerHTML = '';
-                hideDeleteModal();
-            }
         }
 
         function escapeHTML(str) {
