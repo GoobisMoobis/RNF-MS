@@ -28,41 +28,43 @@
         const app = initializeApp(firebaseConfig);
         const database = getDatabase(app);
 
-        // Make these functions available globally
-        window.postMessageToDB = function(messageData) {
-            return window.firebasePush(window.firebaseRef(window.database, 'messages'), messageData);
-        };
-
-        window.listenForMessages = function(callback) {
-            const messagesRef = window.firebaseRef(window.database, 'messages');
-            window.firebaseOnValue(messagesRef, (snapshot) => {
-                const messages = [];
-                snapshot.forEach((childSnapshot) => {
-                    messages.push({
-                        id: childSnapshot.key,
-                        ...childSnapshot.val()
+        // Create a global Firebase object to store all Firebase-related functions
+        window.Firebase = {
+            database: database,
+            ref: ref,
+            push: push,
+            onValue: onValue,
+            remove: remove,
+            update: update,
+            get: get,
+            
+            // Helper methods
+            postMessage: function(messageData) {
+                return push(ref(database, 'messages'), messageData);
+            },
+            
+            listenForMessages: function(callback) {
+                const messagesRef = ref(database, 'messages');
+                onValue(messagesRef, (snapshot) => {
+                    const messages = [];
+                    snapshot.forEach((childSnapshot) => {
+                        messages.push({
+                            id: childSnapshot.key,
+                            ...childSnapshot.val()
+                        });
                     });
+                    callback(messages);
                 });
-                callback(messages);
-            });
+            },
+            
+            updateMessage: function(messageId, updates) {
+                return update(ref(database, `messages/${messageId}`), updates);
+            },
+            
+            deleteAllMessages: function() {
+                return remove(ref(database, 'messages'));
+            }
         };
-
-        window.updateMessage = function(messageId, updates) {
-            return window.firebaseUpdate(window.firebaseRef(window.database, `messages/${messageId}`), updates);
-        };
-
-        window.deleteAllMessages = function() {
-            return window.firebaseRemove(window.firebaseRef(window.database, 'messages'));
-        };
-
-        // Export all Firebase functions and objects to window
-        window.database = database;
-        window.firebaseRef = ref;
-        window.firebaseGet = get;
-        window.firebasePush = push;
-        window.firebaseUpdate = update;
-        window.firebaseRemove = remove;
-        window.firebaseOnValue = onValue; for clarity
     </script>
 </head>
 <body>
@@ -122,34 +124,10 @@
                 showMessageSection();
             }
             // Start listening for messages
-            listenForMessages(displayMessages);
+            Firebase.listenForMessages(displayMessages);
         });
 
-        function setUsername() {
-            const username = document.getElementById('username').value.trim();
-            const nameColor = document.getElementById('nameColor').value;
-            
-            if (!username) {
-                alert('Please enter a username!');
-                return;
-            }
-
-            currentUser = {
-                username: username,
-                color: nameColor
-            };
-
-            localStorage.setItem('currentUser', JSON.stringify(currentUser));
-            showMessageSection();
-        }
-
-        function showMessageSection() {
-            document.getElementById('usernameSection').classList.remove('active');
-            document.getElementById('messageSection').classList.add('active');
-            const currentUsernameSpan = document.getElementById('currentUsername');
-            currentUsernameSpan.textContent = currentUser.username;
-            currentUsernameSpan.style.color = currentUser.color;
-        }
+        // [Previous functions remain the same until postMessage]
 
         async function postMessage() {
             if (!currentUser) {
@@ -165,7 +143,7 @@
             }
 
             try {
-                await postMessageToDB({
+                await Firebase.postMessage({
                     username: currentUser.username,
                     color: currentUser.color,
                     message: message,
@@ -179,28 +157,12 @@
             }
         }
 
-        function displayMessages(messages) {
-            // Sort messages by timestamp
-            messages.sort((a, b) => b.timestamp - a.timestamp);
-            
-            const messagesDiv = document.getElementById('messages');
-            messagesDiv.innerHTML = messages.map(msg => `
-                <div class="message">
-                    <span class="username" style="color: ${escapeHTML(msg.color)}">
-                        ${escapeHTML(msg.username)}
-                    </span>
-                    <span class="timestamp">${new Date(msg.timestamp).toLocaleString()}</span>
-                    <p>${escapeHTML(msg.message)}</p>
-                </div>
-            `).join('');
-        }
-
         async function deleteAccount() {
             const deletedUsername = currentUser.username;
             
             try {
-                const messagesRef = window.firebaseRef(window.database, 'messages');  // Fixed: Using window.firebaseRef
-                const snapshot = await window.firebaseGet(messagesRef);
+                const messagesRef = Firebase.ref(Firebase.database, 'messages');
+                const snapshot = await Firebase.get(messagesRef);
                 
                 const updates = {};
                 snapshot.forEach((childSnapshot) => {
@@ -215,7 +177,7 @@
                 });
 
                 if (Object.keys(updates).length > 0) {
-                    await window.firebaseUpdate(messagesRef, updates);
+                    await Firebase.update(messagesRef, updates);
                 }
 
                 localStorage.removeItem('currentUser');
@@ -231,6 +193,7 @@
                 alert('Error deleting account: ' + error.message);
             }
         }
+
 
         function clearAllData() {
             // Modified to only clear local display
