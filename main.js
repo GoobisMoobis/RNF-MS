@@ -11,6 +11,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Add server clear button for Uncle GoobisMoobis2
     addServerClearButton();
+
+    // Restore messages from local storage on page reload
+    const savedMessages = localStorage.getItem('savedMessages');
+    if (savedMessages) {
+        displayMessages(JSON.parse(savedMessages));
+    }
 });
 
 async function setUsername() {
@@ -75,6 +81,11 @@ async function clearServerMessages() {
             try {
                 await Firebase.clearServerMessages();
                 alert('All server messages have been cleared.');
+                
+                // Clear local storage messages as well
+                localStorage.removeItem('savedMessages');
+                localStorage.removeItem('lastMessageTimestamp');
+                document.getElementById('messages').innerHTML = '';
             } catch (error) {
                 alert('Error clearing server messages: ' + error.message);
             }
@@ -161,6 +172,7 @@ function showDeleteModal() {
 function clearAllData() {
     // Modify the local storage to prevent messages from reappearing
     localStorage.removeItem('lastMessageTimestamp');
+    localStorage.removeItem('savedMessages');
     
     // Clear messages from the display
     const messagesDiv = document.getElementById('messages');
@@ -197,6 +209,9 @@ function displayMessages(messages) {
 
         // Prepend new messages to existing content
         messagesDiv.innerHTML = newMessagesHTML + messagesDiv.innerHTML;
+
+        // Save messages to local storage for persistence
+        localStorage.setItem('savedMessages', JSON.stringify(messages));
 
         // Save the timestamp of the most recent message
         localStorage.setItem('lastMessageTimestamp', 
