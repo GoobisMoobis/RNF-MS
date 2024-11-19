@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', function() {
         currentUser = JSON.parse(savedUser);
         showMessageSection();
     }
+    
     // Start listening for messages
     Firebase.listenForMessages(displayMessages);
 
@@ -182,40 +183,35 @@ function clearAllData() {
 }
 
 function displayMessages(messages) {
-    // Get the last saved timestamp from local storage
-    const lastTimestamp = localStorage.getItem('lastMessageTimestamp') 
-        ? parseInt(localStorage.getItem('lastMessageTimestamp')) 
-        : 0;
+    // Ensure messages is always an array
+    messages = messages || [];
 
     // Sort messages by timestamp
     messages.sort((a, b) => b.timestamp - a.timestamp);
     
-    // Filter out messages older than the last saved timestamp if it exists
-    const filteredMessages = messages.filter(msg => msg.timestamp > lastTimestamp);
-    
     const messagesDiv = document.getElementById('messages');
     
-    // If there are new messages, update the display and save the latest timestamp
-    if (filteredMessages.length > 0) {
-        const newMessagesHTML = filteredMessages.map(msg => `
-            <div class="message">
-                <span class="username ${msg.isRainbow ? 'rainbow-text' : ''}" style="color: ${msg.isRainbow ? '' : escapeHTML(msg.color)}">
-                    ${escapeHTML(msg.username)}
-                </span>
-                <span class="timestamp">${new Date(msg.timestamp).toLocaleString()}</span>
-                <p>${escapeHTML(msg.message)}</p>
-            </div>
-        `).join('');
+    // Always save ALL messages to local storage
+    localStorage.setItem('savedMessages', JSON.stringify(messages));
 
-        // Prepend new messages to existing content
-        messagesDiv.innerHTML = newMessagesHTML + messagesDiv.innerHTML;
+    // Generate HTML for ALL messages
+    const messagesHTML = messages.map(msg => `
+        <div class="message">
+            <span class="username ${msg.isRainbow ? 'rainbow-text' : ''}" style="color: ${msg.isRainbow ? '' : escapeHTML(msg.color)}">
+                ${escapeHTML(msg.username)}
+            </span>
+            <span class="timestamp">${new Date(msg.timestamp).toLocaleString()}</span>
+            <p>${escapeHTML(msg.message)}</p>
+        </div>
+    `).join('');
 
-        // Save messages to local storage for persistence
-        localStorage.setItem('savedMessages', JSON.stringify(messages));
+    // Set the entire innerHTML to all messages
+    messagesDiv.innerHTML = messagesHTML;
 
-        // Save the timestamp of the most recent message
+    // Update the last message timestamp
+    if (messages.length > 0) {
         localStorage.setItem('lastMessageTimestamp', 
-            Math.max(...filteredMessages.map(msg => msg.timestamp)).toString()
+            Math.max(...messages.map(msg => msg.timestamp)).toString()
         );
     }
 }
