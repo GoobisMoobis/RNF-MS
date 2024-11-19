@@ -31,7 +31,8 @@ async function setUsername() {
 
     currentUser = {
         username: username,
-        color: nameColor
+        color: nameColor,
+        isRainbow: username === "Uncle GoobisMoobis2"
     };
 
     localStorage.setItem('currentUser', JSON.stringify(currentUser));
@@ -44,7 +45,7 @@ function showMessageSection() {
     const currentUsernameSpan = document.getElementById('currentUsername');
     
     // Special rainbow effect for Uncle GoobisMoobis2
-    if (currentUser.username === "Uncle GoobisMoobis2") {
+    if (currentUser.isRainbow) {
         currentUsernameSpan.classList.add('rainbow-text');
     } else {
         currentUsernameSpan.classList.remove('rainbow-text');
@@ -100,7 +101,8 @@ async function postMessage() {
             color: currentUser.color,
             message: message,
             timestamp: Date.now(),
-            userId: currentUser.username
+            userId: currentUser.username,
+            isRainbow: currentUser.isRainbow || false
         });
 
         document.getElementById('message').value = '';
@@ -128,7 +130,8 @@ async function deleteAccount() {
                 updates[childSnapshot.key] = {
                     ...message,
                     username: 'Deleted User',
-                    color: '#666666'
+                    color: '#666666',
+                    isRainbow: false
                 };
             }
         });
@@ -148,6 +151,42 @@ async function deleteAccount() {
         hideDeleteModal();
     } catch (error) {
         alert('Error deleting account: ' + error.message);
+    }
+}
+
+function displayMessages(messages) {
+    // Get the last saved timestamp from local storage
+    const lastTimestamp = localStorage.getItem('lastMessageTimestamp') 
+        ? parseInt(localStorage.getItem('lastMessageTimestamp')) 
+        : 0;
+
+    // Sort messages by timestamp
+    messages.sort((a, b) => b.timestamp - a.timestamp);
+    
+    // Filter out messages older than the last saved timestamp if it exists
+    const filteredMessages = messages.filter(msg => msg.timestamp > lastTimestamp);
+    
+    const messagesDiv = document.getElementById('messages');
+    
+    // If there are new messages, update the display and save the latest timestamp
+    if (filteredMessages.length > 0) {
+        const newMessagesHTML = filteredMessages.map(msg => `
+            <div class="message">
+                <span class="username ${msg.isRainbow ? 'rainbow-text' : ''}" style="color: ${msg.isRainbow ? '' : escapeHTML(msg.color)}">
+                    ${escapeHTML(msg.username)}
+                </span>
+                <span class="timestamp">${new Date(msg.timestamp).toLocaleString()}</span>
+                <p>${escapeHTML(msg.message)}</p>
+            </div>
+        `).join('');
+
+        // Prepend new messages to existing content
+        messagesDiv.innerHTML = newMessagesHTML + messagesDiv.innerHTML;
+
+        // Save the timestamp of the most recent message
+        localStorage.setItem('lastMessageTimestamp', 
+            Math.max(...filteredMessages.map(msg => msg.timestamp)).toString()
+        );
     }
 }
 
