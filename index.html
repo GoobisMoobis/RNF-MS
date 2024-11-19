@@ -5,7 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rationality NRTS Faction Message Service</title>
     <link rel="stylesheet" href="styles.css">
-
+    
+    <script>
+        // Check if the visitor came from the password-protected site
+        if (!document.referrer.includes('goobismoobis.github.io/RFA')) {
+            // If they didn't come from the password page, redirect them to it
+            window.location.href = 'https://goobismoobis.github.io/RFA';
+        }
+    </script>
+    
     <!-- Import Firebase -->
     <script type="module">
                 // Import the functions you need from the SDKs you need
