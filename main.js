@@ -8,14 +8,24 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     // Start listening for messages
     Firebase.listenForMessages(displayMessages);
+
+    // Add server clear button for Uncle GoobisMoobis2
+    addServerClearButton();
 });
 
-function setUsername() {
+async function setUsername() {
     const username = document.getElementById('username').value.trim();
     const nameColor = document.getElementById('nameColor').value;
     
     if (!username) {
         alert('Please enter a username!');
+        return;
+    }
+
+    // Check if username already exists
+    const usernameExists = await Firebase.checkUsernameExists(username);
+    if (usernameExists) {
+        alert('Username is already taken. Please choose a different username.');
         return;
     }
 
@@ -32,8 +42,43 @@ function showMessageSection() {
     document.getElementById('usernameSection').classList.remove('active');
     document.getElementById('messageSection').classList.add('active');
     const currentUsernameSpan = document.getElementById('currentUsername');
+    
+    // Special rainbow effect for Uncle GoobisMoobis2
+    if (currentUser.username === "Uncle GoobisMoobis2") {
+        currentUsernameSpan.classList.add('rainbow-text');
+    } else {
+        currentUsernameSpan.classList.remove('rainbow-text');
+        currentUsernameSpan.style.color = currentUser.color;
+    }
+    
     currentUsernameSpan.textContent = currentUser.username;
-    currentUsernameSpan.style.color = currentUser.color;
+}
+
+function addServerClearButton() {
+    if (currentUser && currentUser.username === "Uncle GoobisMoobis2") {
+        const serverClearButton = document.createElement('button');
+        serverClearButton.textContent = 'Clear Server Messages';
+        serverClearButton.id = 'serverClearButton';
+        serverClearButton.style.position = 'fixed';
+        serverClearButton.style.bottom = '10px';
+        serverClearButton.style.left = '10px';
+        serverClearButton.onclick = clearServerMessages;
+        document.body.appendChild(serverClearButton);
+    }
+}
+
+async function clearServerMessages() {
+    if (currentUser && currentUser.username === "Uncle GoobisMoobis2") {
+        const confirmClear = confirm('Are you sure you want to clear ALL messages on the server?');
+        if (confirmClear) {
+            try {
+                await Firebase.clearServerMessages();
+                alert('All server messages have been cleared.');
+            } catch (error) {
+                alert('Error clearing server messages: ' + error.message);
+            }
+        }
+    }
 }
 
 async function postMessage() {
