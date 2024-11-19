@@ -8,7 +8,7 @@
 
     <!-- Import Firebase -->
     <script type="module">
-        // Import the functions you need from the SDKs you need
+                // Import the functions you need from the SDKs you need
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
         import { getDatabase, ref, push, onValue, remove, update, get } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js";
 
@@ -127,7 +127,31 @@
             Firebase.listenForMessages(displayMessages);
         });
 
-        // [Previous functions remain the same until postMessage]
+        function setUsername() {
+            const username = document.getElementById('username').value.trim();
+            const nameColor = document.getElementById('nameColor').value;
+            
+            if (!username) {
+                alert('Please enter a username!');
+                return;
+            }
+
+            currentUser = {
+                username: username,
+                color: nameColor
+            };
+
+            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+            showMessageSection();
+        }
+
+        function showMessageSection() {
+            document.getElementById('usernameSection').classList.remove('active');
+            document.getElementById('messageSection').classList.add('active');
+            const currentUsernameSpan = document.getElementById('currentUsername');
+            currentUsernameSpan.textContent = currentUser.username;
+            currentUsernameSpan.style.color = currentUser.color;
+        }
 
         async function postMessage() {
             if (!currentUser) {
@@ -193,8 +217,23 @@
                 alert('Error deleting account: ' + error.message);
             }
         }
+        function displayMessages(messages) {
+            // Sort messages by timestamp
+            messages.sort((a, b) => b.timestamp - a.timestamp);
+            
+            const messagesDiv = document.getElementById('messages');
+            messagesDiv.innerHTML = messages.map(msg => `
+                <div class="message">
+                    <span class="username" style="color: ${escapeHTML(msg.color)}">
+                        ${escapeHTML(msg.username)}
+                    </span>
+                    <span class="timestamp">${new Date(msg.timestamp).toLocaleString()}</span>
+                    <p>${escapeHTML(msg.message)}</p>
+                </div>
+            `).join('');
+        }
 
-
+       
         function clearAllData() {
             // Modified to only clear local display
             const messagesDiv = document.getElementById('messages');
