@@ -105,6 +105,10 @@
             margin: 10px 0;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            word-wrap: break-word; /* Break long words if necessary */
+            word-break: break-word; /* Alternative for legacy browsers */
+            overflow-wrap: break-word; /* Preferred standard */
+            white-space: normal; /* Allow text to wrap to the next line */
         }
 
         .username {
